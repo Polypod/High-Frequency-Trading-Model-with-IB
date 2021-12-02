@@ -2,15 +2,62 @@ import datetime as dt
 import time
 
 import pandas as pd
+import numpy as np
+import talib
 
 from models.base_model import BaseModel
 from util import dt_util
+import ta
+
+from IPython.display import display, clear_output
+import matplotlib.pyplot as plt
 
 """
 This is a simple high-frequency model that processes incoming market data at tick level.
 
 Statistical calculations involved:
-- beta: the mean prices of A over B
+- beta: the mean prices of A over closes = []
+			highs = []
+			lows = []
+			for bar in self.bars:
+				closes.append(bar.close)
+				highs.append(bar.high)
+				lows.append(bar.low)
+			self.close_array = pd.Series(np.asarray(closes))
+			self.high_array = pd.Series(np.asarray(highs))
+			self.low_array = pd.Series(np.asarray(lows))
+
+			# Calculate Higher Highs and Lows
+			lastLow = self.bars[len(self.bars) - 1].low
+			lastHigh = self.bars[len(self.bars) - 1].high
+			lastClose = self.bars[len(self.bars) - 1].close
+			lastOpen = lastBar.open
+			lastVolume = lastBar.volume
+
+			# SMA
+			self.sma = talib.SMA(self.close_array, self.smaPeriod)
+			print("SMA : " + str(self.sma[len(self.sma) - 1]))
+			print("Close : " + str(self.bars[len(self.bars) - 1].close))
+			print('prevHigh :' + str(self.bars[len(self.bars) - 2].high))
+			print('prevLow :' + str(self.bars[len(self.bars) - 2].low))
+			print("_____")
+
+			# RSI > 40, < 30
+			self.rsi = stream.RSI(self.bars[0].close)
+			print('RSI : ' + self.rsi)
+			# self.stochrsi = ta.momentum.StochasticOscillator(self.close_array, self.rsi_window,
+			# self.smooth_window1, self.smooth_window2, True)
+
+			# MACD
+			# self.macd = ta.trend.MACD(self.close_array,self.macd_window_slow, self.macd_window_fast,
+			#                          self.macd_window_sign,self.fillna)
+
+			# Check Criteria
+			# Entry - If we have a higher high, a higher low and we cross the 50 SMA - Buy
+			if (bar.close > lastClose
+					and self.currentBar.low > lastLow
+					and bar.close > str(self.sma[len(self.sma) - 1])
+					and lastClose < str(self.sma[len(self.sma) - 2])):B
 - volatility ratio: the standard deviation of pct changes of A over B
 
 The signals are then calculated based on these stats:
@@ -41,6 +88,9 @@ class HftModel1(BaseModel):
 		self.beta = 0
 		self.moving_window_period = dt.timedelta(hours=1)
 		self.is_buy_signal, self.is_sell_signal = False, False
+		self.sma = 0
+		self.rsi = 0
+		self.macd = 0
 
 	def run(self, to_trade=[], trade_qty=0):
 		""" Entry point """
@@ -124,6 +174,10 @@ class HftModel1(BaseModel):
 			beta=self.beta,
 			vr=self.volatility_ratio,
 			rpnl=self.pnl.realizedPnL,
+			sma=self.sma,
+			rsi=self.rsi,
+			macd=self.macd
+			
 		))
 
 	def check_and_enter_orders(self):
@@ -140,7 +194,7 @@ class HftModel1(BaseModel):
 		if self.is_position_short and self.is_buy_signal:
 			print('*** CLOSING SHORT POSITION ***')
 			self.place_spread_order(self.trade_qty)
-			return True
+			return True.astype(float)
 
 		if self.is_position_long and self.is_sell_signal:
 			print('*** CLOSING LONG POSITION ***')
@@ -237,21 +291,76 @@ class HftModel1(BaseModel):
 		for contract in self.contracts:
 			self.set_historical_data(contract)
 
-	def set_historical_data(self, contract):
+	def set_historical_data(self, contract, onBarUpdate):
 		symbol = self.get_symbol(contract)
 
+		df = []
 		bars = self.ib.reqHistoricalData(
 			contract,
-			endDateTime=time.strftime('%Y%m%d %H:%M:%S'),
-			durationStr='3600 S',
-			barSizeSetting='5 secs',
+			endDateTime='', # time.strftime('%Y%m%d %H:%M:%S'),
+			durationStr='1 D',
+			barSizeSetting='1 min',
 			whatToShow='MIDPOINT',
 			useRTH=True,
-			formatDate=1
+			formatDate=1,
+			keepUpToDate=True
 		)
+
 		for bar in bars:
 			dt_obj = dt_util.convert_local_datetime(bar.date)
 			self.df_hist.loc[dt_obj, symbol] = bar.close
+
+		df = self.ib.util.df(bars)
+
+		bars.updateEvent += onBarUpdate
+
+	def onBarUpdate(self, bar):
+		lastBar = self.bars[len(self.bars) - 1]
+
+		# On Bar Close
+		closes = []
+		highs = []
+		lows = []
+		for bar in self.bars:
+			closes.append(bar.close)
+			highs.append(bar.high)
+			lows.append(bar.low)
+		self.close_array = pd.Series(np.asarray(closes))
+		self.high_array = pd.Series(np.asarray(highs))
+		self.low_array = pd.Series(np.asarray(lows))
+
+		# Calculate Higher Highs and Lows
+		lastLow = self.bars[len(self.bars) - 1].low
+		lastHigh = self.bars[len(self.bars) - 1].high
+		lastClose = self.bars[len(self.bars) - 1].close
+		lastOpen = lastBar.open
+		lastVolume = lastBar.volume
+
+		# SMA
+		self.sma = ta.trend.sma_indicator(self.close_array, self.smaPeriod)
+		print("SMA : " + str(self.sma[len(self.sma) - 1]))
+		print("Close : " + str(self.bars[len(self.bars) - 1].close))
+		print('prevHigh :' + str(self.bars[len(self.bars) - 2].high))
+		print('prevLow :' + str(self.bars[len(self.bars) - 2].low))
+		print("_____")
+
+		# RSI > 40, < 30
+		#self.rsi = talib.RSI(self.bars[0].close)
+		#print('RSI : ' + self.rsi)
+		# self.stochrsi = ta.momentum.StochasticOscillator(self.close_array, self.rsi_window,
+		# self.smooth_window1, self.smooth_window2, True)
+
+		# MACD
+		# self.macd = ta.trend.MACD(self.close_array,self.macd_window_slow, self.macd_window_fast,
+		#                          self.macd_window_sign,self.fillna)
+
+		# Check Criteria
+		# Entry - If we have a higher high, a higher low and we cross the 50 SMA - Buy
+		if (bar.close > lastClose
+				and self.currentBar.low > lastLow
+				and bar.close > str(self.sma[len(self.sma) - 1])
+				and lastClose < str(self.sma[len(self.sma) - 2])):
+					pass
 
 	@property
 	def is_position_flat(self):

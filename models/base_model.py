@@ -1,5 +1,5 @@
-from ib_insync import IB, Forex, Stock, MarketOrder
-
+import ib_insync as ib
+from ib_insync import *
 from util import order_util
 
 """
@@ -10,10 +10,10 @@ For other models to extend and use.
 
 
 class BaseModel(object):
-	def __init__(self, host='127.0.0.1', port=7497, client_id=1):
+	def __init__(self, host='127.0.0.1', port=7497, clientId=1):
 		self.host = host
 		self.port = port
-		self.client_id = client_id
+		self.clientId = clientId
 
 		self.__ib = None
 		self.pnl = None  # stores IB PnL object
@@ -35,7 +35,7 @@ class BaseModel(object):
 		self.symbols = list(self.symbol_map.values())
 
 	def connect_to_ib(self):
-		self.ib.connect(self.host, self.port, clientId=self.client_id)
+		self.ib.connect(self.host, self.port, clientId=self.clientId)
 
 	def request_pnl_updates(self):
 		account = self.ib.managedAccounts()[0]
@@ -67,6 +67,7 @@ class BaseModel(object):
 
 	def place_market_order(self, contract, qty, fn_on_filled):
 		order = MarketOrder(order_util.get_order_action(qty), abs(qty))
+		self.ib.qualifyContracts(contract)
 		trade = self.ib.placeOrder(contract, order)
 		trade.filledEvent += fn_on_filled
 		return trade
