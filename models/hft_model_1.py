@@ -291,7 +291,7 @@ class HftModel1(BaseModel):
 		for contract in self.contracts:
 			self.set_historical_data(contract)
 
-	def set_historical_data(self, contract, onBarUpdate):
+	def set_historical_data(self, contract):
 		symbol = self.get_symbol(contract)
 
 		df = []
@@ -314,7 +314,7 @@ class HftModel1(BaseModel):
 
 		bars.updateEvent += onBarUpdate
 
-	def onBarUpdate(self, bar):
+	def onBarUpdate(self, hasNewBar):
 		lastBar = self.bars[len(self.bars) - 1]
 
 		# On Bar Close
@@ -356,7 +356,7 @@ class HftModel1(BaseModel):
 
 		# Check Criteria
 		# Entry - If we have a higher high, a higher low and we cross the 50 SMA - Buy
-		if (bar.close > lastClose
+		if (self.bar.close > lastClose
 				and self.currentBar.low > lastLow
 				and bar.close > str(self.sma[len(self.sma) - 1])
 				and lastClose < str(self.sma[len(self.sma) - 2])):
