@@ -20,4 +20,9 @@ if __name__ == '__main__':
 		('SNAP', Stock('SNAP'))
 	]
 
+	'''to_trade = [
+		('EURUSD', Forex('EURUSD')),
+		('USDJPY', Forex('USDJPY'))
+	]'''
+
 	model.run(to_trade=to_trade, trade_qty=10)

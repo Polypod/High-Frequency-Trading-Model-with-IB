@@ -1,9 +1,10 @@
 import datetime as dt
+import time
 from typing import Union, Any
 
 import pandas as pd
 from ib_insync import LimitOrder
-from ta.momentum import rsi
+from ta.momentum import rsi, awesome_oscillator
 from ta.trend import macd, sma_indicator
 
 from models.base_model import BaseModel
@@ -54,6 +55,7 @@ class HftModel1(BaseModel):
         self.sma50 = 0
         self.rsi = 0
         self.macd = 0
+        self.awesome_oscillator = 0
         self.price = 0
 
     def run(self, to_trade=[], trade_qty=0):
@@ -108,6 +110,7 @@ class HftModel1(BaseModel):
 		We use the assumption that price levels will mean-revert.
 		Expected price A = beta x price B
 		"""
+
         self.calculate_signals()
 
         if self.is_orders_pending or self.check_and_enter_orders():
@@ -251,13 +254,14 @@ class HftModel1(BaseModel):
         if not self.forex_pair:
             [symbol] = self.symbol
 
-            resampled = self.df_hist_Close.resample('30s').ffill().dropna()
+            resampled = self.df_hist_close.resample('30s').ffill().dropna()
             mean = resampled.mean()
             self.sma20 = sma_indicator(resampled, 20, True)  # use mean?
             self.sma50 = sma_indicator(resampled, 50, True)
             self.rsi = rsi(resampled, 20, True)
-            self.macd = macd(resampled, 26, 12, 9)
-            self.price = self.df_hist_Close[symbol].dropna().values
+            self.macd = macd(resampled, 26, 12, True)
+            self.awesome_oscillator = (resampled, 5, 34, True)
+            self.price = self.df_hist_close[symbol].dropna().value
         else:
             [symbol_a, symbol_b] = self.symbols
 
@@ -290,10 +294,10 @@ class HftModel1(BaseModel):
         [symbol] = self.symbol
 
         self.candle_signal = bool(self.df_hist_close > self.df_hist_close[-1]
-            and self.df_hist_low[-1] > self.df_hist_low[-2]
-            and self.df_hist_high[0] > self.df_hist_high[-1]
-            )
-
+                                  and self.df_hist_low[0] > self.df_hist_low[-1]
+                                  and self.df_hist_high[0] > self.df_hist_high[-1]
+                                  and self.df_hist_close > self.awesome_oscillator
+                                  )
 
     def trim_historical_data(self):
         """ Ensure historical data don't grow beyond a certain size """
@@ -356,18 +360,18 @@ class HftModel1(BaseModel):
 
         bars = self.ib.reqHistoricalData(
             contract,
-            endDateTime='',  # time.strftime('%Y%m%d %H:%M:%S'),
-            durationStr='1 D',
-            barSizeSetting='1 min',
+            endDateTime=time.strftime('%Y%m%d %H:%M:%S'),
+            durationStr='3600 S',
+            barSizeSetting='5 secs',
             whatToShow='MIDPOINT',
             useRTH=True,
-            formatDate=1,
-            keepUpToDate=True
+            formatDate=1
+            # keepUpToDate=True
         )
 
         for bar in bars:
-            self.dt_obj = dt_util.convert_local_datetime(bar.date)
-            self.df_hist.loc[self.dt_obj, symbol] = bar.close, bar.high, bar.low, bar.open
+            dt_obj = dt_util.convert_local_datetime(bar.date)
+            self.df_hist.loc[dt_obj, symbol] = bar.close
 
     @property
     def is_position_flat(self):
