@@ -22,6 +22,8 @@ class BaseModel(object):
 		self.symbol_map = {}  # maps contract to symbol
 		self.symbols, self.contracts = [], []
 
+		self.forex_pair = None
+
 	def init_model(self, to_trade):
 		"""
 		Initialize the model given inputs before running.
@@ -86,8 +88,10 @@ class BaseModel(object):
 		symbol = ''
 		if type(contract) is Forex:
 			symbol = contract.localSymbol.replace('.', '')
+			self.forex_pair = True
 		elif type(contract) is Stock:
 			symbol = contract.symbol
+			self.forex_pair = False
 
 		return symbol if symbol in self.symbols else ''
 

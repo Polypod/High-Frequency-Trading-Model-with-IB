@@ -1,6 +1,6 @@
 import os
 
-from ib_insync import Forex
+from ib_insync import *
 
 from models.hft_model_1 import HftModel1
 
@@ -17,8 +17,7 @@ if __name__ == '__main__':
 	)
 
 	to_trade = [
-		('EURUSD', Forex('EURUSD')),
-		('USDJPY', Forex('USDJPY'))
+		('SNAP', Stock('SNAP'))
 	]
 
-	model.run(to_trade=to_trade, trade_qty=100)
+	model.run(to_trade=to_trade, trade_qty=10)
