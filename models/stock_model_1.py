@@ -25,9 +25,7 @@ This model takes a mean-reverting approach:
 """
 
 
-class HftModel1(BaseModel):
-    is_buy_signal: Union[bool, Any]
-
+class HftStockModel1(BaseModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
