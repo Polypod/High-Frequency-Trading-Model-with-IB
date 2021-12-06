@@ -1,6 +1,6 @@
 import os
 
-from ib_insync import *
+from ib_insync import Forex, Stock
 
 from models.hft_model_1 import HftModel1
 from models.stock_model_1 import HftStockModel1
@@ -11,24 +11,13 @@ if __name__ == '__main__':
 
 	print('Connecting on host:', TWS_HOST, 'port:', TWS_PORT)
 
-	'''model = HftModel1(
-		host=TWS_HOST,
-		port=TWS_PORT,
-		client_id=2,
-	)'''
 	model = HftStockModel1(
 		host=TWS_HOST,
 		port=TWS_PORT,
-		client_id=2,
 	)
 
 	to_trade = [
-		('SNAP', Stock('SNAP'))
+		('SNAP', Stock('SNAP', 'SMART', 'USD'))
 	]
 
-	'''to_trade = [
-		('EURUSD', Forex('EURUSD')),
-		('USDJPY', Forex('USDJPY'))
-	]'''
-
-	model.run(to_trade=to_trade, trade_qty=10)
+	model.run(to_trade=to_trade, trade_qty=100)
