@@ -1,4 +1,3 @@
-import ib_insync as ib
 from ib_insync import *
 from util import order_util
 
@@ -21,6 +20,7 @@ class BaseModel(object):
 
 		self.symbol_map = {}  # maps contract to symbol
 		self.symbols, self.contracts = [], []
+		self.symbol = []
 
 		self.forex_pair = None
 
